@@ -20,10 +20,16 @@ class InvalidCustomCheckException(Exception):
 class Monitors(dict):
     """List of checks that a remote Nagios can query."""
 
-    def __init__(self, version="0.3"):
-        """Build monitors structure."""
-        self["monitors"] = {"remote": {"nrpe": {}}}
-        self["version"] = version
+    def __init__(self, version='0.3'):
+        self['monitors'] = {
+            'remote': {
+                'nrpe': {}
+            },
+            'local': {
+                'custom': {},
+            },
+        }
+        self['version'] = version
 
     def add_monitors(self, mdict, monitor_label="default"):
         """Add monitors passed in mdict."""
@@ -39,10 +45,17 @@ class Monitors(dict):
 
         for checktype in mdict["monitors"].get("local", []):
             check_details = self.convert_local_checks(
-                mdict["monitors"]["local"],
-                monitor_label,
+                mdict['monitors']['local'],
+                'user',
             )
             self["monitors"]["remote"]["nrpe"].update(check_details)
+
+        for checktype in mdict['monitors'].get('local', []):
+            check_details = mdict['monitors']['local'][checktype]
+            if self['monitors']['local'].get(checktype):
+                self['monitors']['local'][checktype].update(check_details)
+            else:
+                self['monitors']['local'][checktype] = check_details
 
     def add_nrpe_check(self, check_name, command):
         """Add nrpe check to remote monitors."""
@@ -222,13 +235,14 @@ class PrincipalRelation(helpers.RelationContext):
         return "__unit__" in self[self.name][0]
 
     def nagios_hostname(self):
-        """Return the string that nagios will use to identify this host."""
-        host_context = hookenv.config("nagios_host_context")
-        if host_context:
-            host_context += "-"
-        hostname_type = hookenv.config("nagios_hostname_type")
-        if hostname_type == "host" or not self.is_ready():
-            nagios_hostname = "{}{}".format(host_context, socket.gethostname())
+        """ Return the string that nagios will use to identify this host """
+        host_context = hookenv.config('nagios_host_context')
+        #if host_context:
+        #    host_context += '-'
+        hostname_type = hookenv.config('nagios_hostname_type')
+        if hostname_type == 'host' or not self.is_ready():
+            nagios_hostname = "{}.{}".format(socket.gethostname(),
+                                             host_context)
             return nagios_hostname
         else:
             principal_unitname = hookenv.principal_unit()
@@ -238,8 +252,8 @@ class PrincipalRelation(helpers.RelationContext):
                     if relunit.get("primary", "False").lower() == "true":
                         principal_unitname = relunit["__unit__"]
                         break
-            nagios_hostname = "{}{}".format(host_context, principal_unitname)
-            nagios_hostname = nagios_hostname.replace("/", "-")
+            nagios_hostname = "{}.{}".format(principal_unitname, host_context)
+            nagios_hostname = nagios_hostname.replace('/', '-')
             return nagios_hostname
 
     def get_monitors(self):
