@@ -324,10 +324,14 @@ class NRPECheckCtxt(dict):
                 raise InvalidCustomCheckException(
                     'Specified plugin_path "{}" does not exist or is not a '
                     'directory.'.format(custom_path))
+            if 'command' in check_opts:
+               command = check_opts['command']
+            else:
+               command = check_opts['check']
             check = check_opts['check']
             self['cmd_exec'] = os.path.join(custom_path, check)
             self['description'] = check_opts.get('desc', 'Check %s' % check)
-            self['cmd_name'] = check
+            self['cmd_name'] = command
             self['cmd_params'] = check_opts.get('params', '') or ''
         self['description'] += ' ({})'.format(monitor_src)
         self['cmd_name'] += '_' + monitor_src
